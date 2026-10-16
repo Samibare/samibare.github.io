@@ -1,0 +1,186 @@
+---
+/**
+ * The program header table of RW-RWE.out, set as a figure.
+ * Data only: the readelf command and its output, with both GNU_STACK rows marked.
+ */
+import { rwRweHeaders, rwRweCommand } from '../data/figures';
+
+interface Props {
+  /** Mark the two GNU_STACK rows once on load. */
+  animate?: boolean;
+}
+
+const { animate = true } = Astro.props;
+const firstStack = rwRweHeaders.find((r) => r.type === 'GNU_STACK')?.index;
+const lastStack = rwRweHeaders.findLast((r) => r.type === 'GNU_STACK')?.index;
+
+const slots = (flags: string) =>
+  [
+    { letter: 'R', on: flags[0] === 'R' },
+    { letter: 'W', on: flags[1] === 'W' },
+    { letter: 'E', on: flags[2] === 'E' },
+  ] as const;
+
+const spoken = (flags: string) =>
+  slots(flags)
+    .filter((s) => s.on)
+    .map((s) => s.letter)
+    .join('');
+---
+
+<figure class:list={['phdr plate', { animate }]} aria-label={`Output of ${rwRweCommand}`}>
+  <p class="cmd mono">$ {rwRweCommand}</p>
+  <div class="scroll-x" tabindex="0" role="region" aria-label="Program header table">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col" class="idx"><span class="visually-hidden">Index</span></th>
+          <th scope="col">Type</th>
+          <th scope="col" class="opt">Offset</th>
+          <th scope="col" class="opt">MemSiz</th>
+          <th scope="col">Flg</th>
+          <th scope="col" class="num">Align</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          rwRweHeaders.map((r) => (
+            <tr
+              class:list={[
+                'row',
+                {
+                  stack: r.type === 'GNU_STACK',
+                  first: r.index === firstStack,
+                  last: r.index === lastStack,
+                },
+              ]}
+            >
+              <td class="idx">{r.index}</td>
+              <td class="type">{r.type}</td>
+              <td class="opt">{r.offset}</td>
+              <td class="opt">{r.memsz}</td>
+              <td class="flags">
+                <span class="visually-hidden">{spoken(r.flags)}</span>
+                <span aria-hidden="true">
+                  {slots(r.flags).map((s) => (
+                    <span class:list={['slot', { on: s.on, x: s.on && s.letter === 'E' }]}>{s.on ? s.letter : '·'}</span>
+                  ))}
+                </span>
+              </td>
+              <td class="num">{r.align}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+</figure>
+
+<style>
+  .phdr {
+    padding: 1rem 0 0.75rem;
+    min-width: 0;
+    margin: 0;
+    /* faint 8px dot grid, like engineering paper */
+    background-image: radial-gradient(circle at 1px 1px, rgb(234 228 216 / 0.045) 1px, transparent 0);
+    background-size: 8px 8px;
+  }
+  .cmd {
+    padding-inline: 1.125rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--color-ink-2);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+  }
+  th {
+    font-weight: 400;
+    color: var(--color-ink-3);
+    text-align: left;
+    padding: 0.375rem 0.75rem 0.5rem 0;
+    border-bottom: 1px solid var(--color-rule-strong);
+  }
+  td {
+    padding: 0.3125rem 0.75rem 0.3125rem 0;
+    color: var(--color-ink-2);
+    white-space: nowrap;
+  }
+  th:first-child,
+  td:first-child {
+    padding-left: 1.125rem;
+  }
+  th:last-child,
+  td:last-child {
+    padding-right: 1.125rem;
+  }
+  .idx {
+    width: 2.75rem;
+    color: var(--color-ink-3);
+  }
+  .num {
+    text-align: right;
+  }
+  .type {
+    color: var(--color-ink-2);
+  }
+  .stack .type {
+    color: var(--color-ink);
+  }
+
+  .slot {
+    display: inline-block;
+    width: 1.15ch;
+    text-align: center;
+    color: var(--color-ink-3);
+  }
+  .slot.on {
+    color: var(--color-ink-2);
+  }
+  .stack .slot.on {
+    color: var(--color-ink);
+  }
+  .stack .slot.x {
+    color: var(--color-amber);
+    font-weight: 500;
+  }
+
+  .row.first td:first-child {
+    box-shadow: inset 2px 0 0 var(--color-ink-3);
+  }
+  .row.last td:first-child {
+    box-shadow: inset 2px 0 0 var(--color-amber);
+  }
+  .row.first {
+    background: rgb(234 228 216 / 0.04);
+  }
+  .row.last {
+    background: var(--color-amber-wash);
+  }
+
+  /* Hide address columns where there is no room for them. */
+  @media (max-width: 30rem) {
+    .opt {
+      display: none;
+    }
+  }
+
+  /* One orchestrated moment: the eye goes to the first GNU_STACK, then the last. */
+  .animate .row.first {
+    animation: mark 600ms ease-out 350ms both;
+  }
+  .animate .row.last {
+    animation: mark 700ms ease-out 1050ms both;
+  }
+  @keyframes mark {
+    from {
+      background-color: transparent;
+    }
+  }
+</style>

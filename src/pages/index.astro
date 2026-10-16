@@ -1,0 +1,306 @@
+---
+import { getCollection } from 'astro:content';
+import { slug } from 'github-slugger';
+import Base from '../layouts/Base.astro';
+import PhdrFigure from '../components/PhdrFigure.astro';
+import ExternalIcon from '../components/ExternalIcon.astro';
+import ResumeSection from '../components/ResumeSection.astro';
+import { site } from '../data/site';
+import { resume } from '../data/resume';
+import { hiddenResumeSections, hiddenResumeLines, movedResumeLines, resumeSectionOrder } from '../data/resume-display';
+import { renderMarkdown, tableUnderHeading, summaryOf } from '../lib/markdown';
+import { Content as About } from '../content/about.md';
+
+/* Research write-ups, newest first (entries without a date go last). */
+const research = (await getCollection('research', ({ data }) => !data.draft)).sort(
+  (a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0),
+);
+const cards = await Promise.all(
+  research.map(async (entry) => {
+    const href = `/research/${entry.id}/`;
+    const tableMd = entry.data.homeTable ? tableUnderHeading(entry.body ?? '', entry.data.homeTable) : null;
+    return {
+      entry,
+      href,
+      summary: await renderMarkdown(summaryOf(entry)),
+      table: tableMd ? await renderMarkdown(tableMd) : null,
+      tableHref: entry.data.homeTable ? `${href}#${slug(entry.data.homeTable)}` : null,
+    };
+  }),
+);
+const researchHref = cards.length === 1 ? cards[0].href : '/#research';
+
+/* Résumé sections: cybersecurity content only (see src/data/resume-display.ts). */
+type Item = (typeof resume.sections)[number]['items'][number];
+const lineOf = (item: Item) => (item.kind === 'entry' ? item.name : item.text) ?? '';
+const hidden = (item: Item) => hiddenResumeLines.some((start) => lineOf(item).startsWith(start));
+
+// Copy each shown section without its hidden lines, then move lines between sections.
+const pool = resume.sections
+  .filter((s) => !hiddenResumeSections.includes(s.heading))
+  .map((s) => ({ ...s, items: s.items.filter((item) => !hidden(item)) }));
+for (const [start, heading] of Object.entries(movedResumeLines)) {
+  const target = pool.find((s) => s.heading === heading);
+  if (!target) continue;
+  for (const source of pool) {
+    if (source === target) continue;
+    const i = source.items.findIndex((item) => lineOf(item).startsWith(start));
+    if (i >= 0) target.items.push(...source.items.splice(i, 1));
+  }
+}
+const sections = [
+  ...resumeSectionOrder.map((h) => pool.find((s) => s.heading === h)).filter((s) => s !== undefined),
+  ...pool.filter((s) => !resumeSectionOrder.includes(s.heading)),
+].filter((s) => s.items.length > 0);
+/** Phrases at the start of a résumé line that link to pages on this site, e.g. { 'Pocket CTF': '/research/pocket-ctf/' }. */
+const phraseLinks: Record<string, string> = {};
+
+const githubLabel = site.github.replace(/^https?:\/\//, '');
+const resumeFile = site.resume?.split('/').pop();
+
+const personLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: site.name,
+  alternateName: site.handle,
+  url: site.url,
+  sameAs: [site.github],
+};
+---
+
+<Base>
+  <script type="application/ld+json" slot="head" set:html={JSON.stringify(personLd)} />
+
+  <section class="wrap hero" aria-labelledby="hero-title">
+    <div class="hero-text">
+      <h1 id="hero-title">{site.name}</h1>
+      <p class="lead">{resume.summary}</p>
+      <div class="actions">
+        <a class="btn btn-primary" href={researchHref}>Read the research</a>
+        <a class="btn btn-secondary" href={site.github} rel="me">GitHub <ExternalIcon /></a>
+      </div>
+    </div>
+    <PhdrFigure />
+  </section>
+
+  {
+    cards.length > 0 && (
+      <section class="wrap section" id="research" aria-labelledby="research-title">
+        <h2 class="section-title" id="research-title">Research</h2>
+        <div class="section-body research">
+          {cards.map((c) => (
+            <article class="feature" aria-labelledby={`r-${c.entry.id}`}>
+              <h3 id={`r-${c.entry.id}`}>
+                <a href={c.href}>{c.entry.data.title}</a>
+              </h3>
+              <div class="summary" set:html={c.summary} />
+              {c.table && (
+                <figure class="home-table">
+                  <figcaption>
+                    <a href={c.tableHref}>{c.entry.data.homeTable}</a>
+                  </figcaption>
+                  <Fragment set:html={c.table} />
+                </figure>
+              )}
+              <div class="actions">
+                <a class="btn btn-primary" href={c.href}>
+                  Read the write-up
+                </a>
+                {c.entry.data.repo && (
+                  <a class="btn btn-secondary" href={c.entry.data.repo}>
+                    Repository <ExternalIcon />
+                  </a>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  {
+    sections.map((section) => (
+      <section
+        class:list={['wrap', 'section', 'tight']}
+        id={slug(section.heading)}
+        aria-labelledby={`${slug(section.heading)}-title`}
+      >
+        <h2 class="section-title" id={`${slug(section.heading)}-title`}>
+          {section.heading}
+        </h2>
+        <div class="section-body">
+          <ResumeSection section={section} links={phraseLinks} />
+        </div>
+      </section>
+    ))
+  }
+
+  <section class="wrap section" id="about" aria-labelledby="about-title">
+    <h2 class="section-title" id="about-title">About</h2>
+    <div class="section-body prose about">
+      <About />
+    </div>
+  </section>
+
+  <section class="wrap section" id="contact" aria-labelledby="contact-title">
+    <h2 class="section-title" id="contact-title">Contact</h2>
+    <div class="section-body">
+      <!--email_off-->
+      <dl class="channels">
+        {
+          site.email && (
+            <div>
+              <dt>Email</dt>
+              <dd>
+                <a href={`mailto:${site.email}`}>{site.email}</a>
+              </dd>
+            </div>
+          )
+        }
+        {
+          site.phone && (
+            <div>
+              <dt>Phone</dt>
+              <dd>
+                <a href={`tel:${site.phoneE164 ?? site.phone}`}>{site.phone}</a>
+              </dd>
+            </div>
+          )
+        }
+        <div>
+          <dt>GitHub</dt>
+          <dd><a href={site.github} rel="me">{githubLabel}</a></dd>
+        </div>
+        {
+          site.resume && (
+            <div>
+              <dt>Résumé</dt>
+              <dd>
+                <a href={site.resume} type="application/pdf">{resumeFile}</a>
+              </dd>
+            </div>
+          )
+        }
+      </dl>
+      <!--/email_off-->
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* ---------- hero */
+  .hero {
+    display: grid;
+    gap: 2.5rem;
+    padding-block: 3rem 3.5rem;
+  }
+  @media (min-width: 64rem) {
+    .hero {
+      grid-template-columns: minmax(0, 6fr) minmax(0, 6fr);
+      gap: 4rem;
+      align-items: start;
+      padding-block: 5rem 5.5rem;
+    }
+  }
+  .hero-text {
+    min-width: 0;
+    max-width: 38rem;
+  }
+  h1 {
+    font-size: var(--fs-3xl);
+    font-weight: 450;
+    letter-spacing: -0.015em;
+    line-height: 1.02;
+  }
+  .lead {
+    margin-top: 1.5rem;
+    font-size: 1.25rem;
+    line-height: 1.55;
+    color: var(--color-ink);
+    max-width: 36em;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+  }
+
+  /* ---------- research */
+  .research {
+    display: grid;
+    gap: 4rem;
+  }
+  .feature {
+    min-width: 0;
+  }
+  .feature h3 {
+    font-size: var(--fs-2xl);
+    font-weight: 450;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+    max-width: 24ch;
+    overflow-wrap: anywhere;
+  }
+  .feature h3 a {
+    text-decoration: none;
+  }
+  .feature h3 a:hover {
+    text-decoration: underline;
+    text-decoration-color: var(--color-amber);
+    text-decoration-thickness: 1px;
+  }
+  .summary {
+    margin-top: 1.25rem;
+    max-width: var(--measure);
+    color: var(--color-ink);
+  }
+  .home-table {
+    margin: 2rem 0 0;
+    min-width: 0;
+  }
+  .home-table figcaption {
+    font-size: var(--fs-sm);
+    margin-bottom: 0.75rem;
+  }
+  .home-table figcaption a {
+    color: var(--color-ink-2);
+  }
+
+  /* Résumé sections are short; they sit closer together than the sections around them. */
+  .section.tight {
+    padding-block: 2.5rem;
+  }
+  @media (min-width: 64rem) {
+    .section.tight {
+      padding-block: 3rem;
+    }
+  }
+
+  /* ---------- about */
+  .about {
+    max-width: var(--measure);
+  }
+
+  /* ---------- contact */
+  .channels {
+    border-top: 1px solid var(--color-rule);
+    max-width: 36rem;
+  }
+  .channels div {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    gap: 1rem;
+    padding-block: 0.75rem;
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .channels dt {
+    color: var(--color-ink-3);
+    font-size: var(--fs-sm);
+    padding-top: 0.15em;
+  }
+  .channels dd {
+    overflow-wrap: anywhere;
+  }
+</style>

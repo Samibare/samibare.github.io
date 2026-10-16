@@ -1,0 +1,337 @@
+/*
+  Typesetting for Markdown write-ups. src/markdown/plugins.mjs adds the
+  classes used here (section-label, callout, table-wrap, code-frame, flags).
+  Running text keeps a readable measure; tables and code may use the full column.
+*/
+@layer components {
+  .prose {
+    font-size: var(--fs-base);
+    line-height: 1.65;
+    overflow-wrap: break-word;
+  }
+  .prose > * + * {
+    margin-top: 1.1em;
+  }
+  .prose > :where(p, ul, ol, h2, h3, h4, h5, h6, blockquote, .callout, dl) {
+    max-width: var(--measure);
+  }
+  .prose > :where(.table-wrap, .code-frame, pre) {
+    max-width: 60rem;
+  }
+
+  .prose h2 {
+    font-size: var(--fs-xl);
+    font-weight: 500;
+    margin-top: 2.4em;
+  }
+  .prose h3 {
+    font-size: var(--fs-md);
+    margin-top: 2em;
+  }
+  .prose h4 {
+    font-size: var(--fs-base);
+    margin-top: 1.8em;
+  }
+  .prose > :first-child {
+    margin-top: 0;
+  }
+  .prose :where(h2, h3, h4, .section-label) {
+    scroll-margin-top: 1.5rem;
+  }
+  .prose :where(h2, h3, h4) + * {
+    margin-top: 0.75em;
+  }
+
+  .prose a {
+    overflow-wrap: anywhere;
+  }
+  .prose strong {
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+  .prose hr {
+    margin-block: 2.75em;
+    max-width: var(--measure);
+  }
+  .prose img {
+    border: 1px solid var(--color-rule);
+    border-radius: 2px;
+  }
+
+  /* A paragraph that opens with a bold label on its own line ("**Method:**"). */
+  .prose .section-label {
+    margin-top: 2.25em;
+  }
+  .prose .section-label > strong:first-child {
+    display: block;
+    font-size: var(--fs-md);
+    font-weight: 600;
+    line-height: 1.3;
+    margin-bottom: 0.4em;
+  }
+  .prose .section-label > strong:first-child + br {
+    display: none;
+  }
+
+  /* Lists */
+  .prose :where(ul, ol) {
+    padding-left: 1.25em;
+  }
+  .prose ul {
+    list-style: none;
+  }
+  .prose ul > li {
+    position: relative;
+  }
+  .prose ul > li::before {
+    content: "";
+    position: absolute;
+    left: -0.95em;
+    top: calc(0.8em - 0.15rem);
+    width: 0.3rem;
+    height: 0.3rem;
+    border-radius: 50%;
+    background: var(--color-ink-3);
+  }
+  .prose ol {
+    list-style: decimal;
+  }
+  .prose ol > li::marker {
+    color: var(--color-ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .prose li + li,
+  .prose li > :where(ul, ol) {
+    margin-top: 0.45em;
+  }
+
+  /* Quotes and GitHub-style callouts (> [!NOTE]) */
+  .prose blockquote {
+    border-left: 2px solid var(--color-rule-strong);
+    padding-left: 1rem;
+    color: var(--color-ink-2);
+  }
+  .prose blockquote > * + * {
+    margin-top: 0.8em;
+  }
+  .callout {
+    background: var(--color-raised);
+    border: 1px solid var(--color-rule);
+    border-left: 2px solid var(--color-ink-3);
+    border-radius: 2px;
+    padding: 0.875rem 1.125rem;
+    font-size: var(--fs-sm);
+    line-height: 1.6;
+    color: var(--color-ink-2);
+  }
+  .callout-warning,
+  .callout-caution,
+  .callout-important {
+    border-left-color: var(--color-amber);
+  }
+  .callout > * + * {
+    margin-top: 0.7em;
+  }
+  .callout-title {
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+  .callout-title + * {
+    margin-top: 0.35em;
+  }
+
+  /* Inline code that is a segment flag string: the execute letter is marked in
+     tables, where readers compare rows. In running text it stays plain. */
+  .table-wrap code.flags .x {
+    color: var(--color-amber);
+    font-weight: 500;
+  }
+
+  /* Code blocks: Shiki output, wrapped by the code-frame transformer. */
+  .code-frame {
+    margin-inline: 0;
+    margin-bottom: 0;
+    min-width: 0;
+  }
+  .code-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 1rem;
+    padding: 0.5rem 0.875rem;
+    background: var(--color-raised);
+    border: 1px solid var(--color-rule);
+    border-bottom: 0;
+    border-radius: 2px 2px 0 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+  .code-title {
+    color: var(--color-ink);
+    overflow-wrap: anywhere;
+  }
+  .code-lang {
+    margin-left: auto;
+    color: var(--color-ink-3);
+  }
+  pre.astro-code {
+    border: 1px solid var(--color-rule);
+    border-radius: 2px;
+    padding-block: 0.875rem;
+    font-size: 0.8125rem;
+    line-height: 1.65;
+    tab-size: 4;
+  }
+  .code-head + pre.astro-code {
+    border-radius: 0 0 2px 2px;
+  }
+  pre.astro-code:focus-visible {
+    outline-offset: -2px;
+  }
+  pre.astro-code code {
+    display: grid;
+    min-width: max-content;
+  }
+  pre.astro-code .line {
+    min-height: 1.65em;
+    padding-inline: 1.125rem;
+  }
+  pre.astro-code .line.hl {
+    background: var(--color-amber-wash);
+    box-shadow: inset 2px 0 0 var(--color-amber);
+  }
+  pre.astro-code.numbered code {
+    counter-reset: line;
+  }
+  /* Numbers sit in the padding, outside the text, so tab stops line up. */
+  pre.astro-code.numbered .line {
+    position: relative;
+    padding-left: calc(1.125rem + 3.5rem);
+  }
+  pre.astro-code.numbered .line::before {
+    counter-increment: line;
+    content: counter(line);
+    position: absolute;
+    left: 1.125rem;
+    width: 2.5rem;
+    text-align: right;
+    color: var(--color-ink-3);
+    user-select: none;
+  }
+
+  /* Tables */
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-wrap:focus-visible {
+    outline-offset: 2px;
+  }
+  .table-wrap table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: var(--fs-sm);
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+  }
+  .table-wrap caption {
+    caption-side: top;
+    text-align: left;
+    padding-bottom: 0.75rem;
+    color: var(--color-ink);
+    font-weight: 500;
+    line-height: 1.45;
+  }
+  .table-wrap :where(th, td) {
+    padding: 0.625rem 0.875rem;
+    border-bottom: 1px solid var(--color-rule);
+    vertical-align: top;
+    text-align: left;
+  }
+  .table-wrap thead th {
+    vertical-align: bottom;
+    color: var(--color-ink-3);
+    font-weight: 400;
+    border-bottom-color: var(--color-rule-strong);
+  }
+  .table-wrap thead th.flags {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--color-ink);
+    white-space: nowrap;
+  }
+  /* The first column names the row; it stays in view when the table scrolls. */
+  .table-wrap :where(thead th:first-child, tbody th) {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    padding-left: 0;
+    background: var(--color-stock);
+  }
+  .table-wrap tbody th {
+    font-weight: 500;
+    color: var(--color-ink);
+    min-width: 7rem;
+  }
+  .table-wrap td {
+    color: var(--color-ink-2);
+  }
+
+  /* Verdict cells: the word stays; a shape and color repeat it. */
+  .table-wrap td:where(.o-assurance, .o-alarm, .o-agree) {
+    white-space: nowrap;
+  }
+  .table-wrap td:where(.o-assurance, .o-alarm, .o-agree)::before {
+    content: "";
+    display: inline-block;
+    vertical-align: -0.05em;
+    margin-right: 0.5rem;
+  }
+  .table-wrap td.o-assurance {
+    color: var(--color-amber);
+    background: var(--color-amber-wash);
+    box-shadow: inset 0 2px 0 var(--color-amber);
+  }
+  .table-wrap td.o-assurance::before {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 1px;
+    background: var(--color-amber);
+  }
+  .table-wrap td.o-alarm {
+    color: var(--color-ink);
+  }
+  .table-wrap td.o-alarm::before {
+    box-sizing: border-box;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 1px;
+    border: 1.5px dashed var(--color-ink-2);
+  }
+  .table-wrap td.o-agree {
+    color: var(--color-ink-3);
+  }
+  .table-wrap td.o-agree::before {
+    width: 0.3rem;
+    height: 0.3rem;
+    border-radius: 50%;
+    background: var(--color-ink-3);
+    margin-inline: 0.2rem 0.7rem;
+    vertical-align: 0.15em;
+  }
+  .table-wrap td.rt-exec {
+    color: var(--color-amber);
+  }
+  .table-wrap td.nowrap {
+    white-space: nowrap;
+  }
+  /* The kernel (runtime) row is the reference the other rows are read against. */
+  .table-wrap tr.row-ref > * {
+    background: #1a1917;
+  }
+  .table-wrap tr.row-outcome > * {
+    border-top: 1px solid var(--color-rule-strong);
+  }
+}

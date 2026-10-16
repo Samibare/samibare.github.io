@@ -1,0 +1,199 @@
+---
+/**
+ * Layout for long-form Markdown: research write-ups and CTF writeups.
+ * The slot receives the rendered Markdown exactly as written.
+ */
+import Base from './Base.astro';
+import ExternalIcon from '../components/ExternalIcon.astro';
+
+export interface TocEntry {
+  depth: number;
+  id: string;
+  text: string;
+}
+
+interface Props {
+  title: string;
+  description?: string;
+  crumb: { label: string; href: string };
+  /** Short line under the title, e.g. event and date. */
+  meta?: string;
+  repo?: string;
+  toc?: TocEntry[];
+}
+
+const { title, description, crumb, meta, repo, toc = [] } = Astro.props;
+const showToc = toc.length >= 3;
+---
+
+<Base title={title} description={description} ogType="article">
+  <article class="article">
+    <header class="wrap front">
+      <p class="crumb"><a href={crumb.href}>{crumb.label}</a></p>
+      <h1>{title}</h1>
+      {meta && <p class="meta">{meta}</p>}
+      {
+        repo && (
+          <p class="links">
+            <a class="btn btn-secondary" href={repo}>
+              Repository <ExternalIcon />
+            </a>
+          </p>
+        )
+      }
+    </header>
+
+    <div class:list={['wrap', 'layout', { 'with-toc': showToc }]}>
+      {
+        showToc && (
+          <nav class="toc toc-side" aria-label="Contents">
+            <p class="toc-title">Contents</p>
+            <ol>
+              {toc.map((entry) => (
+                <li class={`d${entry.depth}`}>
+                  <a href={`#${entry.id}`}>{entry.text}</a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )
+      }
+      {
+        showToc && (
+          <details class="toc toc-inline">
+            <summary>Contents</summary>
+            <nav aria-label="Contents">
+              <ol>
+                {toc.map((entry) => (
+                  <li class={`d${entry.depth}`}>
+                    <a href={`#${entry.id}`}>{entry.text}</a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          </details>
+        )
+      }
+      <div class="prose body">
+        <slot />
+      </div>
+    </div>
+  </article>
+</Base>
+
+<style>
+  .front {
+    padding-block: 3rem 2.25rem;
+    border-bottom: 1px solid var(--color-rule);
+  }
+  @media (min-width: 64rem) {
+    .front {
+      padding-block: 4.5rem 3rem;
+    }
+  }
+  .crumb {
+    font-size: var(--fs-sm);
+  }
+  .crumb a {
+    color: var(--color-ink-2);
+  }
+  h1 {
+    margin-top: 1rem;
+    font-size: clamp(2rem, 1.35rem + 2.6vw, 3.125rem);
+    font-weight: 450;
+    letter-spacing: -0.015em;
+    line-height: 1.06;
+    max-width: 24ch;
+    overflow-wrap: anywhere;
+  }
+  .meta {
+    margin-top: 1rem;
+    font-size: var(--fs-sm);
+    color: var(--color-ink-3);
+  }
+  .links {
+    margin-top: 1.5rem;
+  }
+
+  .layout {
+    display: grid;
+    gap: 2rem;
+    padding-block: 2.5rem 5rem;
+  }
+  @media (min-width: 64rem) {
+    .layout.with-toc {
+      grid-template-columns: 13rem minmax(0, 1fr);
+      gap: 3.5rem;
+      padding-block: 3.5rem 6rem;
+    }
+  }
+  .body {
+    min-width: 0;
+  }
+
+  .toc {
+    font-size: var(--fs-sm);
+  }
+  .toc-title {
+    color: var(--color-ink-3);
+    margin-bottom: 0.5rem;
+  }
+  .toc ol {
+    display: grid;
+    border-left: 1px solid var(--color-rule);
+  }
+  .toc a {
+    display: block;
+    padding: 0.25rem 0 0.25rem 0.875rem;
+    color: var(--color-ink-2);
+    text-decoration: none;
+    line-height: 1.35;
+  }
+  .toc .d3 a {
+    padding-left: 1.75rem;
+    color: var(--color-ink-3);
+  }
+  .toc a:hover {
+    color: var(--color-ink);
+  }
+
+  /* Phones and tablets: a collapsed list above the text. */
+  .toc-side {
+    display: none;
+  }
+  .toc-inline {
+    border: 1px solid var(--color-rule);
+    border-radius: 2px;
+  }
+  .toc-inline summary {
+    cursor: pointer;
+    padding: 0.625rem 0.875rem;
+    color: var(--color-ink-2);
+    list-style-position: inside;
+  }
+  .toc-inline summary:hover {
+    color: var(--color-ink);
+  }
+  .toc-inline[open] summary {
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .toc-inline ol {
+    border-left: 0;
+    padding-block: 0.5rem;
+  }
+
+  /* Desktop: a sticky list in the margin. */
+  @media (min-width: 64rem) {
+    .toc-inline {
+      display: none;
+    }
+    .toc-side {
+      display: block;
+      position: sticky;
+      top: 1.5rem;
+      align-self: start;
+      max-height: calc(100vh - 3rem);
+      overflow-y: auto;
+    }
+  }
+</style>
