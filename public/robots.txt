@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://goukiwilliams.com/sitemap-index.xml
