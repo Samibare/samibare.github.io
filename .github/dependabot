@@ -1,0 +1,21 @@
+# Weekly dependency updates. The cooldown waits 14 days after a release before
+# proposing it, which keeps freshly published (and possibly compromised)
+# versions out of the build. Security updates are not delayed.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      astro:
+        patterns: ['astro', '@astrojs/*']
